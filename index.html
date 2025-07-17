@@ -22,7 +22,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            /* Wallpaper principal mantido */
+            /* Wallpaper adicionado */
             background-image: url('https://i.pinimg.com/736x/a9/32/4d/a9324d1e16a0130c0e39f7e117231360.jpg');
             background-size: cover;
             background-position: center;
@@ -330,7 +330,6 @@
         <div class="main-content">
             <div class="mode-selector">
                 <button class="mode-btn active" data-mode="chat">Chat</button>
-                <button class="mode-btn" data-mode="image">Gerar Imagem</button>
                 <button class="mode-btn" data-mode="search">Pesquisar</button>
             </div>
             <div id="chat-log">
@@ -373,7 +372,7 @@
                     finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                const apiKey = "AIzaSyC9YNCOIxUOTUliiax_y21GaLoZ1A2L0E8";
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
 
@@ -395,33 +394,6 @@
                     }
                 } catch (error) {
                     console.error("Erro ao chamar a API Gemini:", error);
-                    return { success: false, error: error.message };
-                }
-            };
-
-            async function generateImageResponse(prompt) {
-                const apiKey = "AIzaSyC9YNCOIxUOTUliiax_y21GaLoZ1A2L0E8";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    if (!response.ok) {
-                        const errorDetails = result.error?.message || `Erro na API: ${response.statusText}`;
-                        throw new Error(errorDetails);
-                    }
-                    if (result.predictions && result.predictions[0].bytesBase64Encoded) {
-                        return { success: true, data: `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` };
-                    } else {
-                        throw new Error(result.error?.message || "A resposta da API não continha uma imagem válida.");
-                    }
-                } catch (error) {
-                    console.error("Erro ao chamar a API Imagen:", error);
                     return { success: false, error: error.message };
                 }
             };
@@ -454,30 +426,17 @@
 
                 const loadingMessageElement = appendMessage('', 'ai', true);
 
+                const textResult = await generateTextResponse(prompt);
                 let responseContent = '';
-                if (currentMode === 'image') {
-                    const imageResult = await generateImageResponse(prompt);
-                    if (imageResult.success) {
-                        responseContent = `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`;
-                    } else {
-                        // Lógica de erro melhorada
-                        if (imageResult.error && (imageResult.error.toLowerCase().includes('billed users') || imageResult.error.toLowerCase().includes('unregistered callers'))) {
-                            responseContent = 'Desculpe, a geração de imagens está disponível apenas para contas com faturação ativa na Google. Por favor, configure a faturação na sua conta Google Cloud para usar este recurso.';
-                        } else {
-                            responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
-                        }
-                    }
+
+                if (textResult.success) {
+                    responseContent = textResult.data;
                 } else {
-                    const textResult = await generateTextResponse(prompt);
-                    if (textResult.success) {
-                        responseContent = textResult.data;
+                    // Lógica de erro melhorada
+                    if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
+                        responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
                     } else {
-                        // Lógica de erro melhorada
-                        if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
-                            responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
-                        } else {
-                             responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
-                        }
+                            responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
                     }
                 }
                 
@@ -596,9 +555,7 @@
                 chatLog.innerHTML = '';
                 currentSessionId = null;
                 
-                if (newMode === 'image') {
-                    promptInput.placeholder = 'Descreva a imagem que você quer criar...';
-                } else if (newMode === 'search') {
+                if (newMode === 'search') {
                     promptInput.placeholder = 'O que você quer pesquisar?...';
                 } else {
                     promptInput.placeholder = 'Pergunte algo à MoonLike AI...';
