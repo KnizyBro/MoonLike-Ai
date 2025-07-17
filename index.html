@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoonLike AI</title>
+    <style>
+        /* Importando uma fonte para um visual mais limpo */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+        /* Estilos Gerais - Tema Escuro com Botões Brancos */
+        :root {
+            --sidebar-color: rgba(16, 16, 16, 0.75);
+            --chat-bg-color: rgba(44, 44, 46, 0.8);
+            --input-bg-color: rgba(58, 58, 60, 0.7);
+            --text-color: #f2f2f7;
+            --text-light-color: #8e8e93;
+            --accent-color: #1877f2; /* Cor de destaque para a mensagem do utilizador */
+            --border-color: #3a3a3c;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Wallpaper adicionado */
+            background-image: url('https://i.pinimg.com/736x/a9/32/4d/a9324d1e16a0130c0e39f7e117231360.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout Principal */
+        .app-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Barra Lateral (Sidebar) */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar .new-chat-btn {
+            background-color: #ffffff; /* Fundo branco */
+            color: #000000; /* Texto preto */
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: background-color 0.2s ease;
+        }
+
+        .sidebar .new-chat-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .sidebar .chat-history h3 {
+            color: var(--text-light-color);
+            font-size: 13px;
+            padding: 0 8px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar .chat-history ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+        }
+
+        .sidebar .chat-history li {
+            padding: 10px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background-color 0.2s ease;
+            font-size: 14px;
+        }
+
+        .sidebar .chat-history li:hover {
+            background-color: rgba(44, 44, 46, 0.5);
+        }
+
+        /* Conteúdo Principal */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            background-color: rgba(28, 28, 30, 0.5);
+        }
+        
+        /* Log de Conversa */
+        #chat-log {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        .chat-message {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            max-width: 80%;
+            width: fit-content;
+        }
+        
+        .chat-message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .chat-message .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 0 15px;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+        
+        .chat-message .message-content {
+            background-color: var(--chat-bg-color);
+            padding: 15px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .chat-message.user .message-content {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+        
+        .message-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+        }
+
+        .message-content pre {
+            background-color: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Modos de Operação */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(16, 16, 16, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .mode-btn {
+            background: none;
+            border: 1px solid var(--text-light-color);
+            color: var(--text-light-color);
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mode-btn.active {
+            background-color: #ffffff; /* Fundo branco para o botão ativo */
+            color: #000000; /* Texto preto para o botão ativo */
+            border-color: #ffffff;
+        }
+
+        /* Container do Input */
+        .chat-input-container {
+            padding: 20px 40px;
+            background-color: transparent;
+        }
+
+        .input-area {
+            display: flex;
+            background-color: var(--input-bg-color);
+            border-radius: 18px;
+            padding: 5px;
+            border: 1px solid #545458;
+            backdrop-filter: blur(5px);
+        }
+
+        .input-area input {
+            flex-grow: 1;
+            padding: 15px;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .input-area button {
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+        
+        .input-area button:hover {
+            background-color: #166fe5;
+        }
+
+        .input-area button svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+        }
+        
+        /* Indicador de Carregamento */
+        .loader {
+            display: flex;
+            gap: 5px;
+        }
+        .loader span {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-light-color);
+            border-radius: 50%;
+            animation: bounce 1s infinite;
+        }
+        .loader span:nth-child(2) { animation-delay: 0.2s; }
+        .loader span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        <div class="sidebar">
+            <button class="new-chat-btn">Novo Chat</button>
+            <div class="chat-history">
+                <h3>Histórico</h3>
+                <ul id="history-list">
+                    <!-- O histórico de chats será adicionado aqui dinamicamente -->
+                </ul>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="chat">Chat</button>
+                <button class="mode-btn" data-mode="image">Gerar Imagem</button>
+                <button class="mode-btn" data-mode="search">Pesquisar</button>
+            </div>
+            <div id="chat-log">
+                <!-- As mensagens do chat serão adicionadas aqui -->
+            </div>
+            <div class="chat-input-container">
+                <div class="input-area">
+                    <input type="text" id="prompt-input" placeholder="Pergunte algo à MoonLike AI...">
+                    <button id="send-button">
+                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ELEMENTOS DO DOM ---
+            const sendButton = document.getElementById('send-button');
+            const promptInput = document.getElementById('prompt-input');
+            const chatLog = document.getElementById('chat-log');
+            const historyList = document.getElementById('history-list');
+            const modeSelector = document.querySelector('.mode-selector');
+            const newChatBtn = document.querySelector('.new-chat-btn');
+
+            // --- ESTADO DA APLICAÇÃO ---
+            const aiAvatarUrl = 'https://i.pinimg.com/736x/36/6e/b8/366eb825da0b86e94fd8461af865ce26.jpg';
+            const userAvatarUrl = 'https://i.pinimg.com/1200x/c0/9b/6d/c09b6d7edb7b4b89b382aa6ca0a761de.jpg';
+            let currentMode = 'chat';
+            let chatSessions = []; // Armazena todas as sessões de chat
+            let currentSessionId = null; // ID da sessão de chat ativa
+
+            // --- FUNÇÕES DE API (IA REAL) ---
+            async function generateTextResponse(prompt) {
+                let finalPrompt = prompt;
+                if (currentMode === 'search') {
+                    finalPrompt = `Aja como um assistente de pesquisa. Pesquise e forneça uma resposta concisa e profissional para: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) para melhorar a clareza.`;
+                } else {
+                    finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) quando apropriado.`
+                }
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível obter uma resposta válida.";
+                } catch (error) {
+                    console.error("Erro ao chamar a API Gemini:", error);
+                    return "Desculpe, ocorreu um erro ao tentar processar a sua solicitação.";
+                }
+            };
+
+            async function generateImageResponse(prompt) {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
+                    const result = await response.json();
+                    return result.predictions?.[0]?.bytesBase64Encoded ? `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` : null;
+                } catch (error) {
+                    console.error("Erro ao chamar a API Imagen:", error);
+                    return null;
+                }
+            };
+            
+            // --- LÓGICA DA INTERFACE ---
+
+            function parseMarkdownToHTML(markdown) {
+                if (!markdown) return '';
+                // Processa **negrito** e *itálico*
+                let html = markdown
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+                // Converte quebras de linha em <br>
+                return html.replace(/\n/g, '<br>');
+            }
+
+            const handleSend = async () => {
+                const prompt = promptInput.value.trim();
+                if (!prompt) return;
+
+                // Se for a primeira mensagem de um chat, cria uma nova sessão
+                if (!currentSessionId) {
+                    startNewChatSession(prompt);
+                }
+
+                addMessageToCurrentSession('user', prompt);
+                appendMessage(prompt, 'user');
+                promptInput.value = '';
+
+                const loadingMessageElement = appendMessage('', 'ai', true);
+
+                let responseContent = '';
+                if (currentMode === 'image') {
+                    const imageUrl = await generateImageResponse(prompt);
+                    responseContent = imageUrl ? `<img src="${imageUrl}" alt="Imagem gerada para: ${prompt}">` : "Desculpe, não foi possível gerar a imagem.";
+                } else {
+                    responseContent = await generateTextResponse(prompt);
+                }
+                
+                addMessageToCurrentSession('ai', responseContent);
+                updateMessage(loadingMessageElement, responseContent);
+            };
+
+            function appendMessage(content, sender, isLoading = false) {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = `chat-message ${sender}`;
+                const avatar = document.createElement('img');
+                avatar.className = 'avatar';
+                avatar.src = sender === 'ai' ? aiAvatarUrl : userAvatarUrl;
+                const messageContentDiv = document.createElement('div');
+                messageContentDiv.className = 'message-content';
+
+                if (isLoading) {
+                    messageContentDiv.innerHTML = `<div class="loader"><span></span><span></span><span></span></div>`;
+                } else {
+                    messageContentDiv.innerHTML = parseMarkdownToHTML(content);
+                }
+
+                messageWrapper.appendChild(avatar);
+                messageWrapper.appendChild(messageContentDiv);
+                chatLog.appendChild(messageWrapper);
+                chatLog.scrollTop = chatLog.scrollHeight;
+                return messageWrapper;
+            };
+            
+            function updateMessage(messageElement, newContent) {
+                const messageContentDiv = messageElement.querySelector('.message-content');
+                messageContentDiv.innerHTML = parseMarkdownToHTML(newContent);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            };
+            
+            function addMessageToCurrentSession(sender, content) {
+                const session = chatSessions.find(s => s.id === currentSessionId);
+                if (session) {
+                    session.messages.push({ sender, content });
+                }
+            }
+
+            function startNewChatSession(prompt) {
+                const newSessionId = Date.now();
+                currentSessionId = newSessionId;
+                const newSession = {
+                    id: newSessionId,
+                    title: prompt,
+                    messages: []
+                };
+                chatSessions.push(newSession);
+                addChatToHistoryUI(newSessionId, prompt);
+            }
+
+            function addChatToHistoryUI(sessionId, title) {
+                const listItem = document.createElement('li');
+                listItem.textContent = title;
+                listItem.dataset.sessionId = sessionId;
+                listItem.addEventListener('click', () => {
+                    loadChatSession(sessionId);
+                });
+                historyList.prepend(listItem);
+            };
+
+            function loadChatSession(sessionId) {
+                const session = chatSessions.find(s => s.id === sessionId);
+                if (!session) return;
+
+                currentSessionId = sessionId;
+                chatLog.innerHTML = ''; // Limpa o log visual
+
+                session.messages.forEach(message => {
+                    appendMessage(message.content, message.sender);
+                });
+            }
+
+            function switchMode(newMode) {
+                currentMode = newMode;
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.mode === newMode);
+                });
+                
+                // Limpa o log de chat e reseta a sessão ao trocar de modo
+                chatLog.innerHTML = '';
+                currentSessionId = null;
+                
+                // Atualiza o placeholder do input
+                if (newMode === 'image') {
+                    promptInput.placeholder = 'Descreva a imagem que você quer criar...';
+                } else if (newMode === 'search') {
+                    promptInput.placeholder = 'O que você quer pesquisar?...';
+                } else {
+                    promptInput.placeholder = 'Pergunte algo à MoonLike AI...';
+                }
+            };
+            
+            function startNewChat() {
+                // A função switchMode já limpa o chat e reseta a sessão
+                switchMode('chat');
+            };
+
+            // --- EVENT LISTENERS ---
+            sendButton.addEventListener('click', handleSend);
+            promptInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    handleSend();
+                }
+            });
+            modeSelector.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON') {
+                    switchMode(event.target.dataset.mode);
+                }
+            });
+            newChatBtn.addEventListener('click', startNewChat);
+        });
+    </script>
+</body>
+</html>
