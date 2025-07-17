@@ -323,12 +323,19 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
                     const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível obter uma resposta válida.";
+                    if (!response.ok) {
+                        const errorDetails = result.error?.message || `Erro na API: ${response.statusText}`;
+                        throw new Error(errorDetails);
+                    }
+                    if (result.candidates && result.candidates[0].content.parts[0].text) {
+                        return { success: true, data: result.candidates[0].content.parts[0].text };
+                    } else {
+                        throw new Error("A resposta da API não continha texto válido.");
+                    }
                 } catch (error) {
                     console.error("Erro ao chamar a API Gemini:", error);
-                    return "Desculpe, ocorreu um erro ao tentar processar a sua solicitação.";
+                    return { success: false, error: error.message };
                 }
             };
 
@@ -343,12 +350,19 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
                     const result = await response.json();
-                    return result.predictions?.[0]?.bytesBase64Encoded ? `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` : null;
+                    if (!response.ok) {
+                        const errorDetails = result.error?.message || `Erro na API: ${response.statusText}`;
+                        throw new Error(errorDetails);
+                    }
+                    if (result.predictions && result.predictions[0].bytesBase64Encoded) {
+                        return { success: true, data: `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` };
+                    } else {
+                        throw new Error("A resposta da API não continha uma imagem válida.");
+                    }
                 } catch (error) {
                     console.error("Erro ao chamar a API Imagen:", error);
-                    return null;
+                    return { success: false, error: error.message };
                 }
             };
             
@@ -379,10 +393,15 @@
 
                 let responseContent = '';
                 if (currentMode === 'image') {
-                    const imageUrl = await generateImageResponse(prompt);
-                    responseContent = imageUrl ? `<img src="${imageUrl}" alt="Imagem gerada para: ${prompt}">` : "Desculpe, não foi possível gerar a imagem.";
+                    const imageResult = await generateImageResponse(prompt);
+                    responseContent = imageResult.success 
+                        ? `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`
+                        : `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
                 } else {
-                    responseContent = await generateTextResponse(prompt);
+                    const textResult = await generateTextResponse(prompt);
+                    responseContent = textResult.success
+                        ? textResult.data
+                        : `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
                 }
                 
                 addMessageToCurrentSession('ai', responseContent);
