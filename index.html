@@ -372,7 +372,7 @@
                     finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                const apiKey = "AIzaSyBEDcVwjAZLgqn2X9yHNUeLY0EEx-3F8QE";
+                const apiKey = ""; // Deixado em branco para funcionar no Canvas
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
 
@@ -390,6 +390,9 @@
                     if (result.candidates && result.candidates[0].content.parts[0].text) {
                         return { success: true, data: result.candidates[0].content.parts[0].text };
                     } else {
+                        if (result.promptFeedback && result.promptFeedback.blockReason) {
+                             throw new Error(`Pedido bloqueado por motivo de segurança: ${result.promptFeedback.blockReason}`);
+                        }
                         throw new Error("A resposta da API não continha texto válido.");
                     }
                 } catch (error) {
@@ -425,18 +428,28 @@
                 promptInput.value = '';
 
                 const loadingMessageElement = appendMessage('', 'ai', true);
-
-                const textResult = await generateTextResponse(prompt);
+                
                 let responseContent = '';
+                const lowerCasePrompt = prompt.toLowerCase();
 
-                if (textResult.success) {
-                    responseContent = textResult.data;
+                // Lógica para respostas curtas e específicas
+                if (['ah', 'uh', 'ih'].includes(lowerCasePrompt)) {
+                    responseContent = 'Qualquer coisa so chamar!';
+                } else if (lowerCasePrompt === 'oi') {
+                    responseContent = 'Opa, ta tudo bom com vc?';
                 } else {
-                    // Lógica de erro melhorada
-                    if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
-                        responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
+                    // Se não for uma resposta curta, chama a API
+                    const textResult = await generateTextResponse(prompt);
+                    if (textResult.success) {
+                        responseContent = textResult.data;
                     } else {
+                        if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
+                            responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio.';
+                        } else if (textResult.error && textResult.error.toLowerCase().includes('unregistered callers')) {
+                            responseContent = 'Erro: A sua chave de API não está autorizada a fazer pedidos a partir deste site. Para resolver, use uma plataforma como a Netlify ou Vercel para proteger a sua chave.';
+                        } else {
                             responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
+                        }
                     }
                 }
                 
