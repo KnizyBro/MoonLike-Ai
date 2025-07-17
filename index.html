@@ -158,6 +158,29 @@
             margin-top: 10px;
             display: block;
         }
+        
+        /* Estilos para Títulos no Chat */
+        .message-content h1, .message-content h2, .message-content h3 {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+
+        .message-content h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .message-content h2 {
+            font-size: 1.25em;
+            font-weight: 700;
+        }
+
+        .message-content h3 {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
 
         /* Modos de Operação */
         .mode-selector {
@@ -308,12 +331,13 @@
             async function generateTextResponse(prompt) {
                 let finalPrompt = prompt;
                 if (currentMode === 'search') {
-                    finalPrompt = `Aja como um assistente de pesquisa. Pesquise e forneça uma resposta concisa e profissional para: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) para melhorar a clareza.`;
+                    finalPrompt = `Aja como um assistente de pesquisa. Pesquise e forneça uma resposta concisa e profissional para: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) para melhorar a clareza.`;
                 } else {
-                    finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) quando apropriado.`;
+                    finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                const apiKey = "AIzaSyCggXHV7Hq7lTYyBJoH34N7pudIdfVs2bQ";
+                // AVISO: Não partilhe a sua chave de API publicamente.
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
 
@@ -340,7 +364,8 @@
             };
 
             async function generateImageResponse(prompt) {
-                const apiKey = "AIzaSyCggXHV7Hq7lTYyBJoH34N7pudIdfVs2bQ";
+                 // AVISO: Não partilhe a sua chave de API publicamente.
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
 
@@ -358,7 +383,8 @@
                     if (result.predictions && result.predictions[0].bytesBase64Encoded) {
                         return { success: true, data: `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` };
                     } else {
-                        throw new Error("A resposta da API não continha uma imagem válida.");
+                        // Se não houver predições, pode ser um erro de moderação de conteúdo
+                        throw new Error(result.error?.message || "A resposta da API não continha uma imagem válida.");
                     }
                 } catch (error) {
                     console.error("Erro ao chamar a API Imagen:", error);
@@ -370,11 +396,16 @@
 
             function parseMarkdownToHTML(markdown) {
                 if (!markdown) return '';
-                // Processa **negrito** e *itálico* e converte quebras de linha
-                return markdown
+                // Converte quebras de linha para <br> antes de processar os títulos
+                let html = markdown.replace(/\n/g, '<br>');
+
+                // Processa cabeçalhos, negrito, itálico
+                return html
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/\n/g, '<br>');
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
             }
 
             const handleSend = async () => {
@@ -394,14 +425,28 @@
                 let responseContent = '';
                 if (currentMode === 'image') {
                     const imageResult = await generateImageResponse(prompt);
-                    responseContent = imageResult.success 
-                        ? `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`
-                        : `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
+                    if (imageResult.success) {
+                        responseContent = `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`;
+                    } else {
+                        // Lógica de erro melhorada
+                        if (imageResult.error && imageResult.error.toLowerCase().includes('billed users')) {
+                            responseContent = 'Desculpe, a geração de imagens está disponível apenas para contas com faturação ativa na Google. Por favor, configure a faturação na sua conta Google Cloud para usar este recurso.';
+                        } else {
+                            responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
+                        }
+                    }
                 } else {
                     const textResult = await generateTextResponse(prompt);
-                    responseContent = textResult.success
-                        ? textResult.data
-                        : `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
+                    if (textResult.success) {
+                        responseContent = textResult.data;
+                    } else {
+                        // Lógica de erro melhorada
+                        if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
+                            responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
+                        } else {
+                             responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
+                        }
+                    }
                 }
                 
                 addMessageToCurrentSession('ai', responseContent);
