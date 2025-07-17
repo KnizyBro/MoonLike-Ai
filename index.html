@@ -372,7 +372,7 @@
                     finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                const apiKey = ""; // Deixado em branco para funcionar no Canvas
+                const apiKey = "AIzaSyC_pvTnxet7UObK_zF3xie-iX6rPIgv7HI"; // Deixado em branco para funcionar no Canvas
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
 
