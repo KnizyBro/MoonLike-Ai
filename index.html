@@ -159,14 +159,6 @@
             display: block;
         }
 
-        .message-content pre {
-            background-color: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
         /* Modos de Operação */
         .mode-selector {
             display: flex;
@@ -318,7 +310,7 @@
                 if (currentMode === 'search') {
                     finalPrompt = `Aja como um assistente de pesquisa. Pesquise e forneça uma resposta concisa e profissional para: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) para melhorar a clareza.`;
                 } else {
-                    finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) quando apropriado.`
+                    finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como **negrito** e *itálico*) quando apropriado.`;
                 }
 
                 const apiKey = "AIzaSyCggXHV7Hq7lTYyBJoH34N7pudIdfVs2bQ";
@@ -364,19 +356,17 @@
 
             function parseMarkdownToHTML(markdown) {
                 if (!markdown) return '';
-                // Processa **negrito** e *itálico*
-                let html = markdown
+                // Processa **negrito** e *itálico* e converte quebras de linha
+                return markdown
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
-                // Converte quebras de linha em <br>
-                return html.replace(/\n/g, '<br>');
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
             }
 
             const handleSend = async () => {
                 const prompt = promptInput.value.trim();
                 if (!prompt) return;
 
-                // Se for a primeira mensagem de um chat, cria uma nova sessão
                 if (!currentSessionId) {
                     startNewChatSession(prompt);
                 }
@@ -432,7 +422,7 @@
                 if (session) {
                     session.messages.push({ sender, content });
                 }
-            }
+            };
 
             function startNewChatSession(prompt) {
                 const newSessionId = Date.now();
@@ -444,7 +434,7 @@
                 };
                 chatSessions.push(newSession);
                 addChatToHistoryUI(newSessionId, prompt);
-            }
+            };
 
             function addChatToHistoryUI(sessionId, title) {
                 const listItem = document.createElement('li');
@@ -466,7 +456,7 @@
                 session.messages.forEach(message => {
                     appendMessage(message.content, message.sender);
                 });
-            }
+            };
 
             function switchMode(newMode) {
                 currentMode = newMode;
@@ -474,11 +464,9 @@
                     btn.classList.toggle('active', btn.dataset.mode === newMode);
                 });
                 
-                // Limpa o log de chat e reseta a sessão ao trocar de modo
                 chatLog.innerHTML = '';
                 currentSessionId = null;
                 
-                // Atualiza o placeholder do input
                 if (newMode === 'image') {
                     promptInput.placeholder = 'Descreva a imagem que você quer criar...';
                 } else if (newMode === 'search') {
@@ -489,7 +477,6 @@
             };
             
             function startNewChat() {
-                // A função switchMode já limpa o chat e reseta a sessão
                 switchMode('chat');
             };
 
