@@ -22,7 +22,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            /* Wallpaper adicionado */
+            /* Wallpaper principal mantido */
             background-image: url('https://i.pinimg.com/736x/a9/32/4d/a9324d1e16a0130c0e39f7e117231360.jpg');
             background-size: cover;
             background-position: center;
@@ -373,7 +373,7 @@
                     finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                const apiKey = "";
+                const apiKey = "AIzaSyC9YNCOIxUOTUliiax_y21GaLoZ1A2L0E8";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
 
@@ -400,7 +400,7 @@
             };
 
             async function generateImageResponse(prompt) {
-                const apiKey = "";
+                const apiKey = "AIzaSyC9YNCOIxUOTUliiax_y21GaLoZ1A2L0E8";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
 
@@ -460,14 +460,24 @@
                     if (imageResult.success) {
                         responseContent = `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`;
                     } else {
-                        responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
+                        // Lógica de erro melhorada
+                        if (imageResult.error && (imageResult.error.toLowerCase().includes('billed users') || imageResult.error.toLowerCase().includes('unregistered callers'))) {
+                            responseContent = 'Desculpe, a geração de imagens está disponível apenas para contas com faturação ativa na Google. Por favor, configure a faturação na sua conta Google Cloud para usar este recurso.';
+                        } else {
+                            responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
+                        }
                     }
                 } else {
                     const textResult = await generateTextResponse(prompt);
                     if (textResult.success) {
                         responseContent = textResult.data;
                     } else {
-                        responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
+                        // Lógica de erro melhorada
+                        if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
+                            responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
+                        } else {
+                             responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
+                        }
                     }
                 }
                 
