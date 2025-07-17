@@ -17,6 +17,7 @@
             --text-light-color: #8e8e93;
             --accent-color: #1877f2; /* Cor de destaque para a mensagem do utilizador */
             --border-color: #3a3a3c;
+            --danger-color: #ff4d4f;
         }
 
         body {
@@ -85,19 +86,55 @@
         }
 
         .sidebar .chat-history li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 10px 8px;
             border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .sidebar .chat-history li .chat-title {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            transition: background-color 0.2s ease;
-            font-size: 14px;
+            flex-grow: 1;
         }
 
         .sidebar .chat-history li:hover {
             background-color: rgba(44, 44, 46, 0.5);
         }
+        
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar .chat-history li:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--text-light-color);
+            transition: fill 0.2s ease;
+        }
+
+        .delete-btn:hover svg {
+            fill: var(--danger-color);
+        }
+
 
         /* Conteúdo Principal */
         .main-content {
@@ -336,7 +373,6 @@
                     finalPrompt = `Responda de forma profissional à seguinte questão: "${prompt}". Utilize formatação markdown (como # Título, **negrito** e *itálico*) quando apropriado.`;
                 }
 
-                // AVISO: Não partilhe a sua chave de API publicamente.
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
@@ -364,7 +400,6 @@
             };
 
             async function generateImageResponse(prompt) {
-                 // AVISO: Não partilhe a sua chave de API publicamente.
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
@@ -383,7 +418,6 @@
                     if (result.predictions && result.predictions[0].bytesBase64Encoded) {
                         return { success: true, data: `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}` };
                     } else {
-                        // Se não houver predições, pode ser um erro de moderação de conteúdo
                         throw new Error(result.error?.message || "A resposta da API não continha uma imagem válida.");
                     }
                 } catch (error) {
@@ -396,10 +430,8 @@
 
             function parseMarkdownToHTML(markdown) {
                 if (!markdown) return '';
-                // Converte quebras de linha para <br> antes de processar os títulos
                 let html = markdown.replace(/\n/g, '<br>');
 
-                // Processa cabeçalhos, negrito, itálico
                 return html
                     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -428,24 +460,14 @@
                     if (imageResult.success) {
                         responseContent = `<img src="${imageResult.data}" alt="Imagem gerada para: ${prompt}">`;
                     } else {
-                        // Lógica de erro melhorada
-                        if (imageResult.error && imageResult.error.toLowerCase().includes('billed users')) {
-                            responseContent = 'Desculpe, a geração de imagens está disponível apenas para contas com faturação ativa na Google. Por favor, configure a faturação na sua conta Google Cloud para usar este recurso.';
-                        } else {
-                            responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
-                        }
+                        responseContent = `Desculpe, não foi possível gerar a imagem. Erro: ${imageResult.error}`;
                     }
                 } else {
                     const textResult = await generateTextResponse(prompt);
                     if (textResult.success) {
                         responseContent = textResult.data;
                     } else {
-                        // Lógica de erro melhorada
-                        if (textResult.error && textResult.error.toLowerCase().includes('api key not valid')) {
-                            responseContent = 'A sua chave de API parece ser inválida. Por favor, verifique-a no Google AI Studio e cole-a novamente no código.';
-                        } else {
-                             responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
-                        }
+                        responseContent = `Desculpe, ocorreu um erro. Erro: ${textResult.error}`;
                     }
                 }
                 
@@ -485,6 +507,7 @@
                 const session = chatSessions.find(s => s.id === currentSessionId);
                 if (session) {
                     session.messages.push({ sender, content });
+                    saveSessionsToLocalStorage();
                 }
             };
 
@@ -497,18 +520,50 @@
                     messages: []
                 };
                 chatSessions.push(newSession);
-                addChatToHistoryUI(newSessionId, prompt);
+                addChatToHistoryUI(newSession);
+                saveSessionsToLocalStorage();
             };
 
-            function addChatToHistoryUI(sessionId, title) {
+            function addChatToHistoryUI(session) {
                 const listItem = document.createElement('li');
-                listItem.textContent = title;
-                listItem.dataset.sessionId = sessionId;
-                listItem.addEventListener('click', () => {
-                    loadChatSession(sessionId);
+                listItem.dataset.sessionId = session.id;
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'chat-title';
+                titleSpan.textContent = session.title;
+                titleSpan.addEventListener('click', () => {
+                    loadChatSession(session.id);
                 });
+
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-btn';
+                deleteButton.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>`;
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteChatSession(session.id);
+                });
+                
+                listItem.appendChild(titleSpan);
+                listItem.appendChild(deleteButton);
                 historyList.prepend(listItem);
             };
+
+            function deleteChatSession(sessionId) {
+                // Remove da array de sessões
+                chatSessions = chatSessions.filter(s => s.id !== sessionId);
+                saveSessionsToLocalStorage();
+
+                // Remove da UI
+                const listItem = historyList.querySelector(`li[data-session-id="${sessionId}"]`);
+                if (listItem) {
+                    listItem.remove();
+                }
+
+                // Se o chat apagado era o ativo, limpa a tela
+                if (currentSessionId === sessionId) {
+                    startNewChat();
+                }
+            }
 
             function loadChatSession(sessionId) {
                 const session = chatSessions.find(s => s.id === sessionId);
@@ -544,6 +599,20 @@
                 switchMode('chat');
             };
 
+            // --- LOCAL STORAGE ---
+            function saveSessionsToLocalStorage() {
+                localStorage.setItem('moonlike_ai_sessions', JSON.stringify(chatSessions));
+            }
+
+            function loadSessionsFromLocalStorage() {
+                const savedSessions = localStorage.getItem('moonlike_ai_sessions');
+                if (savedSessions) {
+                    chatSessions = JSON.parse(savedSessions);
+                    historyList.innerHTML = ''; // Limpa a lista antes de recarregar
+                    chatSessions.forEach(session => addChatToHistoryUI(session));
+                }
+            }
+
             // --- EVENT LISTENERS ---
             sendButton.addEventListener('click', handleSend);
             promptInput.addEventListener('keypress', (event) => {
@@ -557,6 +626,9 @@
                 }
             });
             newChatBtn.addEventListener('click', startNewChat);
+
+            // Carrega o histórico ao iniciar a aplicação
+            loadSessionsFromLocalStorage();
         });
     </script>
 </body>
